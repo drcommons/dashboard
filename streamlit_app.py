@@ -1,25 +1,51 @@
 import streamlit as st
 import pandas as pd
 
+st.set_page_config(page_title="FY26 Accounts Dashboard", layout="wide")
 st.title("📊 FY26 Accounts Dashboard")
 
-# Create a file uploader widget
-uploaded_file = st.sidebar.file_uploader("Upload your FY26 Accounts CSV", type=["csv"])
+# 1. Sidebar Uploaders
+st.sidebar.header("Upload Data Files")
+expenses_file = st.sidebar.file_uploader("Upload Expenses CSV", type=["csv"])
+invoices_file = st.sidebar.file_uploader("Upload Invoices CSV", type=["csv"])
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    # Convert 'Gross' column as before...
-    df['Gross'] = df['Gross'].replace(r'[\$,]', '', regex=True).astype(float)
+# 2. Processing Logic
+if expenses_file and invoices_file:
+    # Load and clean Expenses
+    df_exp = pd.read_csv(expenses_file)
+    df_exp['Type'] = 'Expense'
     
-    # Now continue with your charts/KPIs...
-    st.success("Data loaded successfully!")
-else:
-    st.info("Please upload your CSV file in the sidebar to begin.")
-    st.stop() # Stops the app until file is uploaded
+    # Load and clean Invoices
+    df_inv = pd.read_csv(invoices_file)
+    df_inv['Type'] = 'Invoice'
+    
+    # Merge them into one big list
+    df = pd.concat([df_exp, df_inv], ignore_index=True)
+    
+    # Clean the 'Gross' column (Remove $ , and handle parenthesis for negatives)
+    def clean_gross(val):
+        if isinstance(val, str):
+            val = val.replace('$', '').replace(',', '')
+            if '(' in val: # Handle (100.00) as -100.00
+                val = '-' + val.replace('(', '').replace(')', '')
+            return float(val)
+        return val
 
-# 1. Page Config
-st.set_page_config(page_title="FY26 Accounts Dashboard", layout="wide")
-st.title("📊 Business Performance Dashboard")
+    df['Gross'] = df['Gross'].apply(clean_gross)
+    
+    st.success("Files merged successfully!")
+
+    # 3. Simple Dashboard Metrics
+    col1, col2 = st.columns(2)
+    col1.metric("Total Expenses", f"${df[df['Type']=='Expense']['Gross'].sum():,.2f}")
+    col2.metric("Total Invoiced", f"${df[df['Type']=='Invoice']['Gross'].sum():,.2f}")
+
+    # 4. View Data
+    st.subheader("Data Overview")
+    st.dataframe(df)
+    
+else:
+    st.info("👈 Please upload **both** your Expenses CSV and your Invoices CSV in the sidebar to begin.")
 
 # 2. Load Data (Assumes your file is named accounts.csv)
 @st.cache_data
