@@ -1,6 +1,21 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+
+st.title("📊 FY26 Accounts Dashboard")
+
+# Create a file uploader widget
+uploaded_file = st.sidebar.file_uploader("Upload your FY26 Accounts CSV", type=["csv"])
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    # Convert 'Gross' column as before...
+    df['Gross'] = df['Gross'].replace(r'[\$,]', '', regex=True).astype(float)
+    
+    # Now continue with your charts/KPIs...
+    st.success("Data loaded successfully!")
+else:
+    st.info("Please upload your CSV file in the sidebar to begin.")
+    st.stop() # Stops the app until file is uploaded
 
 # 1. Page Config
 st.set_page_config(page_title="FY26 Accounts Dashboard", layout="wide")
